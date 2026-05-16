@@ -1,0 +1,33 @@
+---
+description: Dual-region deployment — Vercel (international) + GitHub Pages (China)
+alwaysApply: true
+---
+
+# Dual-region deployment (Creator Vault)
+
+Every release must work **both internationally and in mainland China** without VPN.
+
+## Code requirements
+
+- **No** Google Fonts, Unsplash, or other blocked foreign CDNs. Use `src/lib/assets.ts` for local paths (`public/covers/`, `#tip/...`).
+- New images/fonts → add under `public/`, reference via `import.meta.env.BASE_URL`.
+- Vercel build: `npm run build` (base `/`). China build: `npm run build:china` (base `./`).
+
+## Deploy targets
+
+| Region | Host | URL |
+|--------|------|-----|
+| International | Vercel (linked to `main`) | `https://<project>.vercel.app` |
+| China / domestic | GitHub Pages (`gh-pages` branch) | `https://asd6666667.github.io/creator-vault/` |
+
+**Never** use `cdn.jsdelivr.net/gh/...` for HTML — it serves pages as plain text (looks like raw code).
+
+## After code changes
+
+1. Push to `main` → Vercel redeploys automatically.
+2. Run `npm run deploy:china` to update GitHub Pages (`gh-pages`), **or** enable GitHub Action: copy `scripts/github-workflow-deploy-dual.yml` → `.github/workflows/deploy-dual.yml` on github.com.
+3. Verify both URLs load the wallet UI (not source code).
+
+## Gitee (optional)
+
+`npm run build:gitee` for `https://<user>.gitee.io/creator-vault/` if user mirrors to Gitee.

@@ -9,6 +9,7 @@
     "build": "vite build",
     "build:china": "vite build --base ./",
     "build:gitee": "vite build --base /creator-vault/",
+    "deploy:china": "node scripts/deploy-gh-pages.mjs",
     "preview": "vite preview",
     "postinstall": "node scripts/install-tcx-wasm.mjs",
     "install:wasm": "node scripts/install-tcx-wasm.mjs"

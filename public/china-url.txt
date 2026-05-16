@@ -1,8 +1,13 @@
-国内免 VPN 访问（请用下面这个，不要用 jsdelivr 链接）：
+Creator Vault — 双区域访问地址
 
+【国内 / 免 VPN】GitHub Pages
 https://asd6666667.github.io/creator-vault/
 
-说明：
-- jsdelivr 的 /gh/ 链接会把网页当成纯文本显示（看起来像一串代码），已弃用。
-- Vercel（*.vercel.app）在国内可能仍需 VPN。
-- 更新代码后需重新执行 npm run build:china 并更新 gh-pages 分支。
+【国外 / 国际】Vercel（在 Vercel 控制台查看你的项目域名）
+https://creator-vault-mfds.vercel.app
+（以 Vercel 实际域名为准）
+
+更新代码：推送到 main 后 Vercel 自动部署；国内站由 GitHub Actions 更新 gh-pages。
+手动更新国内站：npm run deploy:china
+
+不要使用 jsdelivr 的 /gh/ 链接打开网页（会显示源码）。
