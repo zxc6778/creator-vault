@@ -1,10 +1,11 @@
 import type { FundFlow, Work } from "./types";
+import { COVERS } from "./lib/assets";
 
 export const INITIAL_WORKS: Work[] = [
   {
     id: "w1",
     title: "霓虹雨巷",
-    cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=500&fit=crop",
+    cover: COVERS.c1,
     edition: "1 / 50",
     holders: 12,
     earned: 2.4,
@@ -13,7 +14,7 @@ export const INITIAL_WORKS: Work[] = [
   {
     id: "w2",
     title: "静物 · 晨光",
-    cover: "https://images.unsplash.com/photo-1549490349-864368f1c6f5?w=400&h=500&fit=crop",
+    cover: COVERS.c2,
     edition: "3 / 20",
     holders: 8,
     earned: 1.85,
@@ -22,7 +23,7 @@ export const INITIAL_WORKS: Work[] = [
   {
     id: "w3",
     title: "声波档案 #07",
-    cover: "https://images.unsplash.com/photo-1557672172-298e1bd6379e?w=400&h=500&fit=crop",
+    cover: COVERS.c3,
     edition: "1 / 1",
     holders: 1,
     earned: 5.2,

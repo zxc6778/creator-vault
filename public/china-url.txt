@@ -1,0 +1,9 @@
+国内免 VPN 访问（jsDelivr，推送 main 并等待 GitHub Actions 完成后可用）：
+
+https://cdn.jsdelivr.net/gh/asd6666667/creator-vault@gh-pages/index.html
+
+Gitee Pages（镜像到 Gitee 后启用 Pages，base 为 /creator-vault/）：
+
+https://<你的Gitee用户名>.gitee.io/creator-vault/
+
+说明：*.vercel.app 在国内常需 VPN；请优先使用上面两个地址。

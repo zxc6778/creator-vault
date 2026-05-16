@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ActionModal from "./components/ActionModal";
 import WalletModal from "./components/WalletModal";
 import { FUND_LABELS, INITIAL_FLOWS, INITIAL_WORKS } from "./data";
+import { COVERS, TIP_PREVIEW } from "./lib/assets";
 import {
   buildTipLink,
   disconnectWallet,
@@ -13,11 +14,7 @@ import type { WalletSession } from "./lib/tokenCore";
 import type { Action, FundFlow, Tab, Work } from "./types";
 import "./App.css";
 
-const PLACEHOLDER_COVERS = [
-  "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1561214115-f2f40cc83e68?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=500&fit=crop",
-];
+const PLACEHOLDER_COVERS = [COVERS.c1, COVERS.c2, COVERS.c3, COVERS.c4];
 
 const T = {
   tagline: "\u4f5c\u54c1\u4e0e\u8d44\u91d1\uff0c\u4ec5\u6b64\u800c\u5df2",
@@ -67,7 +64,7 @@ export default function App() {
   const [works, setWorks] = useState<Work[]>(INITIAL_WORKS);
   const [flows] = useState<FundFlow[]>(INITIAL_FLOWS);
   const [toast, setToast] = useState<string | null>(null);
-  const [tipLink, setTipLink] = useState("https://tip.creator.vault/preview");
+  const [tipLink, setTipLink] = useState(TIP_PREVIEW);
   const [mintBusy, setMintBusy] = useState(false);
 
   const connected = !!session;
@@ -118,7 +115,7 @@ export default function App() {
       disconnectWallet();
       setSession(null);
       passwordRef.current = "";
-      setTipLink("https://tip.creator.vault/preview");
+      setTipLink(TIP_PREVIEW);
       showToast(T.disconnected);
       return;
     }

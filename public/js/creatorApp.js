@@ -11,9 +11,9 @@ import {
 
 const FUND_LABELS = { tip: "\u6253\u8d4f", royalty: "\u7248\u7a0e", sale: "\u552e\u51fa" };
 const COVERS = [
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1549490349-864368f1c6f5?w=400&h=500&fit=crop",
-  "https://images.unsplash.com/photo-1557672172-298e1bd6379e?w=400&h=500&fit=crop",
+  "/covers/cover-1.svg",
+  "/covers/cover-2.svg",
+  "/covers/cover-3.svg",
 ];
 
 const state = {
@@ -24,7 +24,7 @@ const state = {
   tab: "works",
   modal: null,
   walletOpen: false,
-  tipLink: "https://tip.creator.vault/preview",
+  tipLink: "#tip/preview",
   mintBusy: false,
   works: [
     { id: "w1", title: "\u9713\u8679\u96e8\u5df7", cover: COVERS[0], edition: "1 / 50", holders: 12, earned: 2.4, royaltyRate: 8 },
@@ -114,7 +114,7 @@ function onWalletClick() {
     disconnectWallet();
     state.session = null;
     state.password = "";
-    state.tipLink = "https://tip.creator.vault/preview";
+    state.tipLink = "#tip/preview";
     toast("\u5df2\u65ad\u5f00\u8fde\u63a5");
     render();
     return;

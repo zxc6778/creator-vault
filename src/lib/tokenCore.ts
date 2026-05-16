@@ -169,7 +169,4 @@ export async function signTipIdentity(
   return result.signature;
 }
 
-export function buildTipLink(address: string, sig?: string): string {
-  const base = `https://tip.creator.vault/${address.replace(/^0x/i, "").slice(0, 16)}`;
-  return sig ? `${base}?sig=${encodeURIComponent(sig.slice(0, 18))}` : base;
-}
+export { tipLinkForAddress as buildTipLink } from "./assets";

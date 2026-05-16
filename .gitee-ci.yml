@@ -1,0 +1,14 @@
+# Gitee Pages: 在 Gitee 仓库 → 服务 → Gitee Pages 选择 gh-pages 分支 / 根目录
+# 或推送后在 设置 → Pages 启用，访问 https://<用户>.gitee.io/creator-vault/
+master:
+  stage:
+    - build
+  jobs:
+    build:
+      stage: build
+      script:
+        - npm install
+        - npm run build:gitee
+      artifacts:
+        paths:
+          - dist/

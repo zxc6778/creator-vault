@@ -20,8 +20,9 @@
   --royalty: #d4a8e8;
   --sale: #e8c4a8;
   --radius: 14px;
-  --font: "DM Sans", system-ui, sans-serif;
-  --font-display: "Instrument Serif", Georgia, serif;
+  --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Songti SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
 }
 
 html {

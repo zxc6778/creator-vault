@@ -116,6 +116,7 @@ export async function signTipIdentity(session, password) {
 }
 
 export function buildTipLink(address, sig) {
-  const base = `https://tip.creator.vault/${address.replace(/^0x/i, "").slice(0, 16)}`;
+  const id = address.replace(/^0x/i, "").slice(0, 16);
+  const base = `${location.origin}${location.pathname}#tip/${id}`;
   return sig ? `${base}?sig=${encodeURIComponent(sig.slice(0, 18))}` : base;
 }
