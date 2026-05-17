@@ -1,7 +1,7 @@
 Creator Vault — 双区域访问地址
 
 【国内 / 免 VPN】GitHub Pages
-https://asd6666667.github.io/creator-vault/
+https://zxc6778.github.io/creator-vault/
 
 【国外 / 国际】Vercel（在 Vercel 控制台查看你的项目域名）
 https://creator-vault-mfds.vercel.app

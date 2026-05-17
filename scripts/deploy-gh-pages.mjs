@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build China-friendly static site and push to gh-pages branch.
- * GitHub Pages: https://asd6666667.github.io/creator-vault/ (Easy Wallet)
+ * GitHub Pages: https://zxc6778.github.io/creator-vault/ (Easy Wallet)
  */
 import { execSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
@@ -36,10 +36,10 @@ try {
   run(`${git} checkout -B ${branch}`, { cwd: tmp, env: gitEnv });
   run(`${git} add -A`, { cwd: tmp });
   run(`${git} commit -m "deploy: ${new Date().toISOString()}"`, { cwd: tmp, env: gitEnv });
-  const repo = process.env.REPO_URL || "https://github.com/asd6666667/creator-vault.git";
+  const repo = process.env.REPO_URL || "https://github.com/zxc6778/creator-vault.git";
   run(`${git} push -f ${repo} HEAD:${branch}`, { cwd: tmp, env: gitEnv });
   console.log("\nGitHub Pages URL:");
-  console.log("  https://asd6666667.github.io/creator-vault/");
+  console.log("  https://zxc6778.github.io/creator-vault/");
   console.log("\n若首次部署，请在仓库 Settings → Pages → Source 选择 gh-pages 分支。");
 } finally {
   rmSync(tmp, { recursive: true, force: true });

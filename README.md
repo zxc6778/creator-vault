@@ -49,7 +49,7 @@ npm install
 npm run deploy:china
 ```
 
-访问：**https://asd6666667.github.io/creator-vault/**
+访问：**https://zxc6778.github.io/creator-vault/**
 
 推送 `main` 分支后也会由 GitHub Actions 自动部署到 `gh-pages`。
 
