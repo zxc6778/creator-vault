@@ -1,0 +1,60 @@
+---
+description: imToken 十周年等活动 — Web3 网页钱包作品申报字段模板（复制即用）
+alwaysApply: true
+---
+
+# Web3 网页钱包 — 作品申报模板（imToken 等）
+
+用户做 **网页 Web3 钱包** 并需填表时，按此模板输出可复制内容。字段以 imToken 十周年 AI 表单为准。
+
+## 固定选项（单选）
+
+| 字段 | 默认选择 |
+|------|----------|
+| **作品形态** | 网页钱包 |
+| **创作方向** | 钱包体验（仅选一个；偏密钥本地托管可选「安全与自托管」） |
+| **作品完成度** | 有 TokenCore 真签名、无链上发交易 → **可交互原型**；已发测试网交易 → **测试网可运行** |
+
+## 作品名称（≤30 字）
+
+```
+Creator Vault 创作者钱包
+```
+
+## 作品简介（≤300 字）
+
+```
+面向内容创作者的极简 Web3 网页钱包。集成 TokenCore（@consenlabs/tcx-wasm），在浏览器本地创建 keystore、派生 ETH 地址并完成消息签名；界面仅保留「我的作品」与「资金流水」，支持 NFT 铸造签名、版税查看与粉丝打赏链接生成。密钥与助记词不出本机。已部署 Vercel（国际）与 GitHub Pages（国内）。链上发币/NFT 上链为演示流程，重点展示创作者场景下的钱包体验。
+```
+
+## Token Core 使用说明（必填）
+
+```
+参考材料：
+1. ConsenLabs token-core-monorepo 中的 tcx-wasm 模块
+2. npm 包 @consenlabs/tcx-wasm（v0.9.1）及官方类型定义
+
+实现方式：
+· 使用 init() 加载 tcx_wasm_bg.wasm，在浏览器本地运行
+· create_keystore：密码创建/导入助记词钱包
+· derive_accounts：按 BIP44 路径 m/44'/60'/0'/0/0 派生 ETH 地址
+· sign_message：对铸造、打赏等消息做 Personal Sign
+· cache_keystore / clear_cached_keystore：会话内缓存与断开清理
+· keystore 加密 JSON 存于 localStorage，私钥与助记词不出本机
+
+未使用：完整 imToken App SDK、链上 RPC 发交易（当前为 UI + 签名演示）。
+```
+
+## 链接（本项目）
+
+- **Github**：https://github.com/asd6666667/creator-vault
+- **演示（国际 / Vercel）**：以 Vercel 控制台实际域名为准，如 `https://creator-vault-mfds.vercel.app`
+- **演示（国内 / GitHub Pages）**：https://asd6666667.github.io/creator-vault/
+
+## 安全确认
+
+提醒用户勾选：提交材料不包含助记词、私钥、密码或真实资产敏感截图。
+
+## 新项目时
+
+替换作品名称、简介中的场景描述与链接；形态/创作方向/完成度按实际上线情况调整，但默认仍为：**网页钱包 + 钱包体验 + 可交互原型**。

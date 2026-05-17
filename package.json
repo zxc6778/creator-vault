@@ -1,15 +1,13 @@
 {
-  "name": "creator-vault",
+  "name": "easy-wallet",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Web3 创作者极简网页钱包 — 作品与资金，仅此而已",
+  "description": "小白友好型链上钱包助手 — 集成 TokenCore (tcx-wasm)",
   "scripts": {
     "dev": "vite",
+    "start": "vite",
     "build": "vite build",
-    "build:china": "vite build --base ./",
-    "build:gitee": "vite build --base /creator-vault/",
-    "deploy:china": "node scripts/deploy-gh-pages.mjs",
     "preview": "vite preview",
     "postinstall": "node scripts/install-tcx-wasm.mjs",
     "install:wasm": "node scripts/install-tcx-wasm.mjs"

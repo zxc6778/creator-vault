@@ -16,6 +16,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/swap/paraswap/:path*",
+      "destination": "https://api.paraswap.io/:path*"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

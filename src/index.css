@@ -7,22 +7,23 @@
 }
 
 :root {
-  --bg: #0c0c0e;
-  --surface: #141416;
-  --surface-elevated: #1c1c1f;
-  --border: rgba(255, 255, 255, 0.06);
-  --text: #f4f4f5;
-  --text-muted: #8b8b94;
-  --accent: #e8c4a8;
-  --accent-dim: rgba(232, 196, 168, 0.15);
-  --positive: #7dd3a8;
-  --tip: #a8c8e8;
-  --royalty: #d4a8e8;
-  --sale: #e8c4a8;
-  --radius: 14px;
+  --bg: #eef4ff;
+  --bg-accent: #dbeafe;
+  --surface: #ffffff;
+  --border: #c7d9f5;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --success: #059669;
+  --radius: 16px;
+  --shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
   --font: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
-    "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Songti SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
+    sans-serif;
+  --max-width: 480px;
 }
 
 html {
@@ -32,10 +33,10 @@ html {
 
 body {
   font-family: var(--font);
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--bg-accent) 0%, var(--bg) 40%);
   color: var(--text);
   min-height: 100dvh;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 #root {
@@ -51,17 +52,13 @@ button {
 }
 
 input,
-textarea {
+textarea,
+select {
   font-family: inherit;
   color: inherit;
 }
 
-img {
-  display: block;
-  max-width: 100%;
-}
-
 ::selection {
-  background: var(--accent-dim);
-  color: var(--accent);
+  background: var(--primary-soft);
+  color: var(--primary);
 }

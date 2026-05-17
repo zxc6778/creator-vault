@@ -1,56 +1,91 @@
-# Creator Vault + TokenCore
+# Easy Wallet
 
-Web3 创作者极简网页钱包，已接入 imToken **[token-core](https://github.com/consenlabs/token-core-monorepo)** 的浏览器 WASM 包 **`@consenlabs/tcx-wasm`**。
+**小白友好型链上钱包助手** — 基于 imToken [TokenCore](https://github.com/consenlabs/token-core-monorepo) 浏览器 WASM 包 [`@consenlabs/tcx-wasm`](https://www.npmjs.com/package/@consenlabs/tcx-wasm) 构建。
 
-## TokenCore 能力（已接入）
+清爽蓝白 UI，大按钮、移动端与桌面端自适应，可直接部署到 [Vercel](https://vercel.com)。
 
-| 功能 | tcx-wasm API |
-|------|----------------|
-| 创建 / 解锁钱包 | `create_keystore` + `derive_accounts` |
-| 以太坊收款地址 | `ETHEREUM` / `m/44'/60'/0'/0/0` |
-| 铸造作品签名 | `sign_message`（PersonalSign 铸造意向） |
-| 打赏身份链接 | `sign_message` + 本地链接 |
+## 功能
 
-助记词与私钥在浏览器内由 WASM 处理，不上传服务器。Keystore JSON 保存在 `localStorage`（`creator-vault-keystore`），密码仅驻留内存。
+| 模块 | 说明 |
+|------|------|
+| 极简创建 | 助记词创建 / 导入、一键生成助记词、风险提示勾选 |
+| 链上操作 | ETH 主网 / Sepolia 测试网切换、余额查询、`sign_tx` 本地签名转账 |
+| 闪兑 | ETH / USDC / USDT 一键兑换（[ParaSwap](https://www.paraswap.io) 聚合路由 + TokenCore 签名） |
+| 新手引导 | 三步教程：创建钱包 → 备份助记词 → 发起转账 |
+| 安全存储 | Keystore JSON 本地加密（`localStorage`），密码与助记词不上传服务器 |
+| TokenCore | `create_keystore`、`derive_accounts`、`export_mnemonic`、`sign_tx` |
 
-## 快速启动（无需 npm）
+## 快速开始
 
-已内置 `public/tcx-wasm/`（v0.9.1），只需 Node：
-
-```bash
-node server.mjs
-```
-
-浏览器打开 **http://localhost:5173**
-
-## 完整开发（需 Node.js + npm）
+**推荐（开发）：**
 
 ```bash
 npm install
 npm run dev
 ```
 
-`postinstall` 会自动下载 WASM 到 `public/tcx-wasm/`。
+终端会显示地址，浏览器打开 **http://localhost:5173**（不要双击 `index.html`，文件协议无法加载 React / WASM）。
 
-## 目录
+**预览构建结果：**
 
-```
-public/tcx-wasm/     # @consenlabs/tcx-wasm 浏览器包
-public/js/
-  tcxBridge.js       # TokenCore 封装（standalone）
-  creatorApp.js      # standalone 主应用
-src/lib/
-  tcxWasm.ts         # Vite/React 侧 WASM 初始化
-  tokenCore.ts       # 钱包会话、签名
-src/components/
-  WalletModal.tsx    # 创建 / 解锁钱包
+```bash
+npm run build
+npm run preview
 ```
 
-## 说明
+或：
 
-- **铸造 NFT**：当前为 TokenCore 链下签名（铸造意向），非链上合约铸造；可后续对接 ERC-721 交易构建 + `sign_tx`。
-- **资金流水 / 版税汇总**：仍为演示数据，便于保持「只展示作品与资金」的极简 UI。
-- 参考文档：[tcx-wasm README](https://github.com/consenlabs/token-core-monorepo/tree/tenth-anniversary/token-core/tcx-wasm)
+```bash
+npm run build
+node server.mjs
+```
+
+`postinstall` 会将 WASM 复制到 `public/tcx-wasm/`（与 npm 包版本一致）。
+
+## 部署到 Vercel
+
+1. 将本仓库推送到 GitHub / Gitee
+2. 在 Vercel 导入项目，框架选择 **Vite**
+3. 构建命令：`npm run build`，输出目录：`dist`
+4. 根目录已包含 `vercel.json`（SPA 回退 + WASM MIME）
+
+或使用 CLI：
+
+```bash
+npm i -g vercel
+vercel
+```
+
+## 目录结构
+
+```
+src/
+  App.tsx                 # 主界面
+  components/
+    WalletSetupModal.tsx  # 创建 / 导入 / 解锁
+    BackupMnemonicModal.tsx
+    OnboardingGuide.tsx   # 三步新手教程
+    SendPanel.tsx         # 转账
+  lib/
+    tcxWasm.ts            # WASM 初始化
+    tokenCore.ts          # 钱包会话、签名
+    ethereum.ts           # JSON-RPC（余额、广播）
+    networks.ts           # 主网 / 测试网配置
+public/tcx-wasm/          # tcx-wasm 浏览器包
+vercel.json
+```
+
+## 安全说明
+
+- 助记词与 Keystore **仅在浏览器内**由 TokenCore 处理，本项目无后端账户系统。
+- 密码用于解锁本机 Keystore；**遗忘密码需用助记词恢复**。
+- 新手请先在 **Sepolia 测试网**练习，主网资产请谨慎操作。
+- 公共电脑请勿保存钱包；助记词勿截图、勿通过网络发送。
+
+## 参考
+
+- [token-core-monorepo](https://github.com/consenlabs/token-core-monorepo)
+- [tcx-wasm README](https://github.com/consenlabs/token-core-monorepo/tree/tenth-anniversary/token-core/tcx-wasm)
 
 ## License
 

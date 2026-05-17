@@ -1,337 +1,366 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ActionModal from "./components/ActionModal";
-import WalletModal from "./components/WalletModal";
-import { FUND_LABELS, INITIAL_FLOWS, INITIAL_WORKS } from "./data";
-import { COVERS, TIP_PREVIEW } from "./lib/assets";
+import { useCallback, useEffect, useRef, useState } from "react";
+import BackupMnemonicModal from "./components/BackupMnemonicModal";
+import OnboardingGuide from "./components/OnboardingGuide";
+import SendPanel from "./components/SendPanel";
+import SwapPanel from "./components/SwapPanel";
+import WalletSetupModal from "./components/WalletSetupModal";
+import { fetchBalance, formatWeiToEth } from "./lib/ethereum";
 import {
-  buildTipLink,
+  DEFAULT_NETWORK,
+  NETWORKS,
+  getNetwork,
+  type NetworkId,
+} from "./lib/networks";
+import {
+  clearStoredKeystore,
   disconnectWallet,
   ensureTcx,
-  signMintAttestation,
-  signTipIdentity,
+  isBackupConfirmed,
+  isTutorialDone,
+  loadStoredKeystore,
+  loadStoredNetwork,
+  markTutorialDone,
+  saveStoredNetwork,
 } from "./lib/tokenCore";
 import type { WalletSession } from "./lib/tokenCore";
-import type { Action, FundFlow, Tab, Work } from "./types";
+import type { AppView } from "./types";
 import "./App.css";
 
-const PLACEHOLDER_COVERS = [COVERS.c1, COVERS.c2, COVERS.c3, COVERS.c4];
-
-const T = {
-  tagline: "\u4f5c\u54c1\u4e0e\u8d44\u91d1\uff0c\u4ec5\u6b64\u800c\u5df2",
-  withdraw: "\u53ef\u63d0\u73b0",
-  connect: "\u8fde\u63a5\u521b\u4f5c\u8005\u94b1\u5305",
-  mint: "\u94f8\u9020 NFT",
-  royalty: "\u67e5\u770b\u7248\u7a0e",
-  tip: "\u7c89\u4e1d\u6253\u8d4f",
-  myWorks: "\u6211\u7684\u4f5c\u54c1",
-  funds: "\u8d44\u91d1\u6d41\u6c34",
-  holders: "\u4f4d\u6301\u6709\u8005",
-  royaltyPct: "\u7248\u7a0e",
-  earned: "\u7d2f\u8ba1\u6536\u76ca",
-  tipSum: "\u6253\u8d4f",
-  royaltySum: "\u7248\u7a0e",
-  saleSum: "\u552e\u51fa",
-  emptyWorks: "\u8fd8\u6ca1\u6709\u4f5c\u54c1\uff0c\u70b9\u51fb\u300c\u94f8\u9020 NFT\u300d\u5f00\u59cb\u521b\u4f5c",
-  emptyFunds: "\u6682\u65e0\u8d44\u91d1\u8bb0\u5f55",
-  disconnected: "\u5df2\u65ad\u5f00\u8fde\u63a5",
-  connected: "TokenCore \u94b1\u5305\u5df2\u8fde\u63a5",
-  mintOk: (t: string) => `\u300c${t}\u300d\u5df2\u901a\u8fc7 TokenCore \u7b7e\u540d`,
-  mintNeedWallet: "\u8bf7\u5148\u8fde\u63a5\u94b1\u5305\u518d\u94f8\u9020",
-  tipCopied: "\u6253\u8d4f\u94fe\u63a5\u5df2\u590d\u5236",
-  tipNeedWallet: "\u8bf7\u5148\u8fde\u63a5\u94b1\u5305",
-  quickActions: "\u5feb\u6377\u64cd\u4f5c",
-  worksList: "\u4f5c\u54c1\u5217\u8868",
-  fundsList: "\u8d44\u91d1\u6d41\u6c34",
-  tcxLoading: "TokenCore \u52a0\u8f7d\u4e2d\u2026",
-  tcxReady: "TokenCore",
-  signed: "\u5df2\u7b7e\u540d",
-  wasmFail: "TokenCore WASM \u52a0\u8f7d\u5931\u8d25",
-  mintSignFail: "\u94f8\u9020\u7b7e\u540d\u5931\u8d25",
-} as const;
-
 function shortAddress(addr: string) {
-  return `${addr.slice(0, 6)}\u2026${addr.slice(-4)}`;
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
 export default function App() {
   const [tcxLoading, setTcxLoading] = useState(true);
   const [tcxReady, setTcxReady] = useState(false);
+  const [networkId, setNetworkId] = useState<NetworkId>(() => {
+    const stored = loadStoredNetwork();
+    return stored === "mainnet" || stored === "sepolia" ? stored : DEFAULT_NETWORK;
+  });
+  const network = getNetwork(networkId);
+
   const [session, setSession] = useState<WalletSession | null>(null);
-  const passwordRef = useRef<string>("");
+  const passwordRef = useRef("");
   const [walletOpen, setWalletOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("works");
-  const [modal, setModal] = useState<Action | null>(null);
-  const [works, setWorks] = useState<Work[]>(INITIAL_WORKS);
-  const [flows] = useState<FundFlow[]>(INITIAL_FLOWS);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [view, setView] = useState<AppView>("home");
+  const [balance, setBalance] = useState<string>("—");
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [tipLink, setTipLink] = useState(TIP_PREVIEW);
-  const [mintBusy, setMintBusy] = useState(false);
+  const [backupDone, setBackupDone] = useState(isBackupConfirmed);
+  const [transferDone, setTransferDone] = useState(false);
+  const [tutorialDone, setTutorialDone] = useState(isTutorialDone);
+  const [guideStep, setGuideStep] = useState(1);
 
   const connected = !!session;
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2800);
+    setTimeout(() => setToast(null), 3200);
   }, []);
 
   useEffect(() => {
     ensureTcx()
       .then(() => setTcxReady(true))
-      .catch((err) => {
-        console.error("TokenCore init failed:", err);
-        setToast(T.wasmFail);
-      })
+      .catch(() => showToast("TokenCore WASM 加载失败"))
       .finally(() => setTcxLoading(false));
   }, [showToast]);
 
-  const balance = useMemo(
-    () => flows.reduce((s, f) => s + f.amount, 0) + works.reduce((s, w) => s + w.earned, 0) * 0.1,
-    [flows, works]
-  );
+  const refreshBalance = useCallback(async () => {
+    if (!session) return;
+    setBalanceLoading(true);
+    try {
+      const wei = await fetchBalance(network, session.address);
+      setBalance(formatWeiToEth(wei));
+    } catch {
+      setBalance("—");
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [session, network]);
 
-  const fundSummary = useMemo(() => {
-    const sum = { tip: 0, royalty: 0, sale: 0 };
-    for (const f of flows) sum[f.type] += f.amount;
-    return sum;
-  }, [flows]);
+  useEffect(() => {
+    refreshBalance();
+    const timer = setInterval(refreshBalance, 20_000);
+    return () => clearInterval(timer);
+  }, [refreshBalance]);
 
-  const handleWalletConnected = useCallback(
-    async (s: WalletSession, password: string) => {
+  useEffect(() => {
+    saveStoredNetwork(networkId);
+  }, [networkId]);
+
+  useEffect(() => {
+    if (!tcxReady || session) return;
+    const ks = loadStoredKeystore();
+    if (ks) setWalletOpen(true);
+  }, [tcxReady, session]);
+
+  const handleConnected = useCallback(
+    (s: WalletSession, password: string) => {
       passwordRef.current = password;
       setSession(s);
-      showToast(T.connected);
-      try {
-        const sig = await signTipIdentity(s, password);
-        setTipLink(buildTipLink(s.address, sig));
-      } catch {
-        setTipLink(buildTipLink(s.address));
+      setGuideStep(2);
+      showToast("钱包已解锁");
+      if (!isBackupConfirmed()) {
+        setBackupOpen(true);
+      } else {
+        setBackupDone(true);
+        setGuideStep(3);
       }
     },
     [showToast]
   );
 
-  const connectWallet = () => {
-    if (connected) {
-      disconnectWallet();
-      setSession(null);
-      passwordRef.current = "";
-      setTipLink(TIP_PREVIEW);
-      showToast(T.disconnected);
-      return;
-    }
-    if (!tcxReady) {
-      showToast(T.tcxLoading);
-      return;
-    }
-    setWalletOpen(true);
+  const handleNetworkChange = (id: NetworkId) => {
+    setNetworkId(id);
+    showToast(`已切换至 ${NETWORKS[id].label}`);
   };
 
-  const openAction = (action: Action) => {
-    if ((action === "mint" || action === "tip") && !connected) {
-      showToast(action === "mint" ? T.mintNeedWallet : T.tipNeedWallet);
-      setWalletOpen(true);
-      return;
-    }
-    setModal(action);
+  const disconnect = () => {
+    disconnectWallet();
+    setSession(null);
+    passwordRef.current = "";
+    setBalance("—");
+    showToast("已断开钱包");
   };
 
-  const handleMint = async (title: string, supply: number, royalty: number) => {
-    if (!session || !passwordRef.current) {
-      showToast(T.mintNeedWallet);
-      setWalletOpen(true);
-      return;
-    }
-    setMintBusy(true);
-    try {
-      const { signature } = await signMintAttestation(
-        session,
-        passwordRef.current,
-        title,
-        supply,
-        royalty
-      );
-      const cover = PLACEHOLDER_COVERS[works.length % PLACEHOLDER_COVERS.length];
-      const work: Work = {
-        id: `w${Date.now()}`,
-        title,
-        cover,
-        edition: `0 / ${supply}`,
-        holders: 0,
-        earned: 0,
-        royaltyRate: royalty,
-        mintSignature: signature,
-      };
-      setWorks((prev) => [work, ...prev]);
-      showToast(T.mintOk(title));
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : T.mintSignFail);
-    } finally {
-      setMintBusy(false);
-    }
+  const clearWallet = () => {
+    if (!confirm("将删除本机 Keystore，请确认已备份助记词。此操作不可撤销。")) return;
+    clearStoredKeystore();
+    disconnect();
+    setBackupDone(false);
+    setTransferDone(false);
+    setTutorialDone(false);
+    showToast("本地钱包数据已清除");
   };
 
-  const handleCopyTip = () => {
-    showToast(T.tipCopied);
+  const onGuideAction = (step: number) => {
+    setGuideStep(step);
+    if (step === 1) setWalletOpen(true);
+    else if (step === 2) setBackupOpen(true);
+    else if (step === 3) setView("home");
+    else if (step === 4) setView("swap");
   };
 
   return (
     <div className="app">
-      <header className="header">
+      <header className="topbar">
         <div className="brand">
-          <h1>Creator Vault</h1>
-          <p>{T.tagline}</p>
-          {tcxReady && <span className="tcx-badge">{T.tcxReady}</span>}
+          <h1>Easy Wallet</h1>
+          <p>小白友好 · TokenCore 链上助手</p>
+          {tcxReady && <span className="badge">TokenCore</span>}
         </div>
-        <div className="balance-pill">
-          <span>{T.withdraw}</span>
-          <strong>{balance.toFixed(2)} ETH</strong>
-        </div>
+        <select
+          className="network-select"
+          value={networkId}
+          onChange={(e) => handleNetworkChange(e.target.value as NetworkId)}
+          aria-label="选择网络"
+        >
+          {Object.values(NETWORKS).map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.label}
+            </option>
+          ))}
+        </select>
       </header>
 
-      <button
-        type="button"
-        className={`wallet-btn ${connected ? "connected" : ""}`}
-        onClick={connectWallet}
-        disabled={tcxLoading}
-      >
-        {tcxLoading
-          ? T.tcxLoading
-          : connected && session
-            ? shortAddress(session.address)
-            : T.connect}
-      </button>
-
-      <section className="actions" aria-label={T.quickActions}>
-        <button type="button" className="action-card" onClick={() => openAction("mint")}>
-          <div className="icon" aria-hidden>{"\u2726"}</div>
-          <span>{T.mint}</span>
-        </button>
-        <button type="button" className="action-card" onClick={() => openAction("royalty")}>
-          <div className="icon" aria-hidden>{"\u25c8"}</div>
-          <span>{T.royalty}</span>
-        </button>
-        <button type="button" className="action-card" onClick={() => openAction("tip")}>
-          <div className="icon" aria-hidden>{"\u2661"}</div>
-          <span>{T.tip}</span>
-        </button>
-      </section>
-
-      <nav className="tabs" role="tablist">
+      <nav className="bottom-nav" aria-label="主导航">
         <button
           type="button"
-          role="tab"
-          aria-selected={tab === "works"}
-          className={`tab ${tab === "works" ? "active" : ""}`}
-          onClick={() => setTab("works")}
+          className={view === "home" ? "active" : ""}
+          onClick={() => setView("home")}
         >
-          {T.myWorks}
+          首页
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={tab === "funds"}
-          className={`tab ${tab === "funds" ? "active" : ""}`}
-          onClick={() => setTab("funds")}
+          className={view === "swap" ? "active" : ""}
+          onClick={() => setView("swap")}
         >
-          {T.funds}
+          闪兑
+        </button>
+        <button
+          type="button"
+          className={view === "guide" ? "active" : ""}
+          onClick={() => setView("guide")}
+        >
+          教程
+        </button>
+        <button
+          type="button"
+          className={view === "wallet" ? "active" : ""}
+          onClick={() => setView("wallet")}
+        >
+          钱包
         </button>
       </nav>
 
-      <main>
-        {tab === "works" && (
-          <section className="works-list" aria-label={T.worksList}>
-            {works.length === 0 ? (
-              <p className="empty-hint">{T.emptyWorks}</p>
-            ) : (
-              works.map((w) => (
-                <article key={w.id} className="work-card">
-                  <img className="work-cover" src={w.cover} alt={w.title} loading="lazy" />
-                  <div className="work-info">
-                    <h3>{w.title}</h3>
-                    <div className="work-meta">
-                      <span>{w.edition}</span>
-                      <span>
-                        {w.holders} {T.holders}
-                      </span>
-                      <span>
-                        {T.royaltyPct} {w.royaltyRate}%
-                      </span>
-                      {w.mintSignature && <span className="signed-badge">{T.signed}</span>}
-                    </div>
-                    <div className="work-stats">
-                      <div className="work-stat">
-                        <label>{T.earned}</label>
-                        <strong>{w.earned.toFixed(2)} ETH</strong>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))
+      <main className="main">
+        {view === "home" && (
+          <>
+            <section className="card balance-card">
+              <p className="label">账户余额 · {network.shortLabel}</p>
+              {connected && session ? (
+                <>
+                  <p className="address">{shortAddress(session.address)}</p>
+                  <p className="balance">
+                    {balanceLoading ? "查询中…" : balance}{" "}
+                    <span>{network.nativeSymbol}</span>
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-outline btn-sm"
+                    onClick={refreshBalance}
+                    disabled={balanceLoading}
+                  >
+                    刷新余额
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="balance muted">未连接钱包</p>
+                  <button
+                    type="button"
+                    className="btn-primary btn-block btn-lg"
+                    onClick={() => setWalletOpen(true)}
+                    disabled={tcxLoading}
+                  >
+                    {tcxLoading ? "加载 TokenCore…" : "创建 / 导入钱包"}
+                  </button>
+                </>
+              )}
+            </section>
+
+            {connected && session && passwordRef.current && (
+              <SendPanel
+                session={session}
+                password={passwordRef.current}
+                network={network}
+                onSuccess={() => {
+                  setTransferDone(true);
+                  setGuideStep(3);
+                  showToast("转账已广播");
+                  refreshBalance();
+                }}
+              />
             )}
-          </section>
+
+            <section className="card security-card">
+              <h3>安全说明</h3>
+              <ul>
+                <li>助记词与 Keystore 经 TokenCore 本地加密，不上传任何服务器</li>
+                <li>密码仅用于解锁本机存储，遗忘后需用助记词恢复</li>
+                <li>闪兑仅在以太坊主网可用，测试网请用转账练习</li>
+              </ul>
+            </section>
+          </>
         )}
 
-        {tab === "funds" && (
-          <section aria-label={T.fundsList}>
-            <div className="funds-summary">
-              <div className="summary-item tip">
-                <label>{T.tipSum}</label>
-                <strong>{fundSummary.tip.toFixed(2)}</strong>
-              </div>
-              <div className="summary-item royalty">
-                <label>{T.royaltySum}</label>
-                <strong>{fundSummary.royalty.toFixed(2)}</strong>
-              </div>
-              <div className="summary-item sale">
-                <label>{T.saleSum}</label>
-                <strong>{fundSummary.sale.toFixed(2)}</strong>
-              </div>
-            </div>
-            <div className="funds-list">
-              {flows.length === 0 ? (
-                <p className="empty-hint">{T.emptyFunds}</p>
-              ) : (
-                flows.map((f) => (
-                  <div key={f.id} className="fund-row">
-                    <div className={`fund-badge ${f.type}`}>{FUND_LABELS[f.type]}</div>
-                    <div className="fund-detail">
-                      <div className="title">
-                        {f.from}
-                        {f.workTitle ? ` ? ${f.workTitle}` : ""}
-                      </div>
-                      <div className="sub">{FUND_LABELS[f.type]}</div>
-                    </div>
-                    <div className="fund-amount">
-                      <strong>
-                        +{f.amount} {f.currency}
-                      </strong>
-                      <time>{f.at}</time>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        {view === "swap" && (
+          <>
+            {connected && session && passwordRef.current ? (
+              <SwapPanel
+                session={session}
+                password={passwordRef.current}
+                network={network}
+                onSuccess={() => {
+                  showToast("闪兑交易已提交");
+                  refreshBalance();
+                }}
+              />
+            ) : (
+              <section className="card swap-panel">
+                <h2>闪兑</h2>
+                <p className="desc">请先连接钱包后再进行代币兑换。</p>
+                <button
+                  type="button"
+                  className="btn-primary btn-block btn-lg"
+                  onClick={() => setWalletOpen(true)}
+                >
+                  连接钱包
+                </button>
+              </section>
+            )}
+          </>
+        )}
+
+        {view === "guide" && (
+          <OnboardingGuide
+            currentStep={guideStep}
+            walletReady={connected}
+            backupDone={backupDone}
+            transferDone={transferDone}
+            onAction={onGuideAction}
+            onComplete={() => {
+              markTutorialDone();
+              setTutorialDone(true);
+              showToast("恭喜完成新手教程！");
+              setView("home");
+            }}
+          />
+        )}
+
+        {view === "wallet" && (
+          <section className="card wallet-settings">
+            <h2>钱包管理</h2>
+            {connected && session ? (
+              <>
+                <p className="full-address">{session.address}</p>
+                <p className="desc">派生路径：{session.derivationPath}</p>
+                <button
+                  type="button"
+                  className="btn-outline btn-block"
+                  onClick={() => setBackupOpen(true)}
+                >
+                  查看 / 备份助记词
+                </button>
+                <button type="button" className="btn-secondary btn-block" onClick={disconnect}>
+                  断开连接
+                </button>
+                <button type="button" className="btn-danger btn-block" onClick={clearWallet}>
+                  清除本机钱包
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="desc">尚未连接钱包</p>
+                <button
+                  type="button"
+                  className="btn-primary btn-block btn-lg"
+                  onClick={() => setWalletOpen(true)}
+                >
+                  创建 / 导入钱包
+                </button>
+              </>
+            )}
+            {!tutorialDone && (
+              <p className="hint">完成「教程」可获得完整上手体验</p>
+            )}
           </section>
         )}
       </main>
 
-      <ActionModal
-        action={modal}
-        works={works}
-        tipLink={tipLink}
-        mintBusy={mintBusy}
-        walletAddress={session?.address}
-        onClose={() => setModal(null)}
-        onMint={handleMint}
-        onCopyTip={handleCopyTip}
-      />
-
-      <WalletModal
+      <WalletSetupModal
         open={walletOpen}
         loading={tcxLoading}
+        network={network}
         onClose={() => setWalletOpen(false)}
-        onConnected={handleWalletConnected}
+        onConnected={handleConnected}
       />
+
+      {session && passwordRef.current && (
+        <BackupMnemonicModal
+          open={backupOpen}
+          session={session}
+          password={passwordRef.current}
+          onDone={() => {
+            setBackupOpen(false);
+            setBackupDone(true);
+            setGuideStep(3);
+            showToast("助记词备份已完成");
+          }}
+        />
+      )}
 
       {toast && (
         <div className="toast" role="status">

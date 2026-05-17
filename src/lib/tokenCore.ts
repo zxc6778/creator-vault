@@ -1,14 +1,24 @@
 import {
+  fetchGasPrice,
+  fetchNonce,
+  parseEthToWei,
+} from "./ethereum";
+import type { NetworkConfig } from "./networks";
+import {
   ETH_PATH,
   cache_keystore,
   clear_cached_keystore,
   create_keystore,
   derive_accounts,
+  export_mnemonic,
   initTcxWasm,
-  sign_message,
+  sign_tx,
 } from "./tcxWasm";
 
-const STORAGE_KEY = "creator-vault-keystore";
+const STORAGE_KEY = "easy-wallet-keystore";
+const NETWORK_KEY = "easy-wallet-network";
+const BACKUP_KEY = "easy-wallet-backup-done";
+const TUTORIAL_KEY = "easy-wallet-tutorial-done";
 
 export interface EthAccount {
   address: string;
@@ -23,9 +33,21 @@ export interface WalletSession {
   derivationPath: string;
 }
 
-export interface MintSignResult {
-  signature: string;
-  payload: string;
+export interface SignTxResult {
+  signature?: string;
+  signedTransaction?: string;
+  rawTransaction?: string;
+  txHash?: string;
+}
+
+export interface SwapTxPayload {
+  to: string;
+  from: string;
+  value: string;
+  data: string;
+  gas: string;
+  gasPrice?: string;
+  chainId: number;
 }
 
 export async function ensureTcx(): Promise<void> {
@@ -46,28 +68,97 @@ export function saveKeystore(keystoreJson: string): void {
 
 export function clearStoredKeystore(): void {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(BACKUP_KEY);
   clear_cached_keystore();
+}
+
+export function isBackupConfirmed(): boolean {
+  return localStorage.getItem(BACKUP_KEY) === "1";
+}
+
+export function markBackupConfirmed(): void {
+  localStorage.setItem(BACKUP_KEY, "1");
+}
+
+export function isTutorialDone(): boolean {
+  return localStorage.getItem(TUTORIAL_KEY) === "1";
+}
+
+export function markTutorialDone(): void {
+  localStorage.setItem(TUTORIAL_KEY, "1");
+}
+
+export function loadStoredNetwork(): string | null {
+  try {
+    return localStorage.getItem(NETWORK_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveStoredNetwork(id: string): void {
+  localStorage.setItem(NETWORK_KEY, id);
+}
+
+export async function generateMnemonicPhrase(): Promise<string> {
+  await ensureTcx();
+  const tempPass = crypto.randomUUID();
+  const entropy = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const keystoreJson = create_keystore(
+    JSON.stringify({ password: tempPass, entropy, network: "MAINNET" })
+  );
+  const { mnemonic } = JSON.parse(
+    export_mnemonic(JSON.stringify({ keystoreJson, key: tempPass }))
+  ) as { mnemonic: string };
+  clear_cached_keystore();
+  if (!mnemonic) {
+    throw new Error("助记词生成失败");
+  }
+  return mnemonic;
+}
+
+export async function exportWalletMnemonic(
+  session: WalletSession,
+  password: string
+): Promise<string> {
+  await ensureTcx();
+  const { mnemonic } = JSON.parse(
+    export_mnemonic(
+      JSON.stringify({
+        keystoreJson: session.keystoreJson,
+        key: password,
+      })
+    )
+  ) as { mnemonic: string };
+  if (!mnemonic) {
+    throw new Error("无法导出助记词，请检查密码");
+  }
+  return mnemonic;
 }
 
 export async function createPasswordWallet(
   password: string,
-  mnemonic?: string
+  mnemonic?: string,
+  network: NetworkConfig = { tcxNetwork: "MAINNET" } as NetworkConfig
 ): Promise<WalletSession> {
   await ensureTcx();
   const param: Record<string, string> = {
     password,
-    network: "MAINNET",
+    network: network.tcxNetwork,
   };
   if (mnemonic?.trim()) {
     param.mnemonic = mnemonic.trim();
   }
   const keystoreJson = create_keystore(JSON.stringify(param));
-  return unlockKeystore(keystoreJson, password, true);
+  return unlockKeystore(keystoreJson, password, network, true);
 }
 
 export async function unlockKeystore(
   keystoreJson: string,
   password: string,
+  network: NetworkConfig,
   persist = true
 ): Promise<WalletSession> {
   await ensureTcx();
@@ -80,8 +171,8 @@ export async function unlockKeystore(
           {
             chain: "ETHEREUM",
             derivationPath: ETH_PATH,
-            chainId: "1",
-            network: "MAINNET",
+            chainId: network.chainId,
+            network: network.tcxNetwork,
           },
         ],
       })
@@ -108,65 +199,97 @@ export function disconnectWallet(): void {
   clear_cached_keystore();
 }
 
-export async function signMintAttestation(
+export async function signEthTransfer(
   session: WalletSession,
   password: string,
-  title: string,
-  supply: number,
-  royalty: number
-): Promise<MintSignResult> {
+  network: NetworkConfig,
+  to: string,
+  amountEth: string
+): Promise<SignTxResult> {
   await ensureTcx();
   cache_keystore(session.keystoreJson);
-  const payload = JSON.stringify({
-    action: "creator-vault-mint",
-    title,
-    supply,
-    royaltyRate: royalty,
-    address: session.address,
-    ts: Date.now(),
-  });
+
+  const toAddr = to.trim();
+  if (!/^0x[a-fA-F0-9]{40}$/.test(toAddr)) {
+    throw new Error("收款地址格式不正确");
+  }
+
+  const valueWei = parseEthToWei(amountEth);
+  const nonce = await fetchNonce(network, session.address);
+  const gasPrice = await fetchGasPrice(network);
+  const gasLimit = "21000";
 
   const result = JSON.parse(
-    sign_message(
+    sign_tx(
       JSON.stringify({
         key: password,
         chain: "ETHEREUM",
         derivationPath: session.derivationPath,
         input: {
-          message: payload,
-          signatureType: "PersonalSign",
+          nonce,
+          gasPrice,
+          gasLimit,
+          to: toAddr,
+          value: valueWei.toString(),
+          chainId: network.chainId,
         },
       })
     )
-  ) as { signature: string };
+  ) as SignTxResult;
 
-  if (!result.signature) {
+  if (!result.signature && !result.signedTransaction && !result.rawTransaction) {
     throw new Error("TokenCore 签名失败");
   }
 
-  return { signature: result.signature, payload };
+  return result;
 }
 
-export async function signTipIdentity(
+export async function signSwapTx(
   session: WalletSession,
-  password: string
-): Promise<string> {
+  password: string,
+  network: NetworkConfig,
+  tx: SwapTxPayload
+): Promise<SignTxResult> {
   await ensureTcx();
   cache_keystore(session.keystoreJson);
+
+  const nonce = await fetchNonce(network, session.address);
+  const gasPrice =
+    tx.gasPrice ?? (await fetchGasPrice(network));
+
+  const input: Record<string, string> = {
+    nonce,
+    gasPrice: String(gasPrice),
+    gasLimit: String(tx.gas),
+    to: tx.to,
+    value: String(tx.value || "0"),
+    data: tx.data.startsWith("0x") ? tx.data : `0x${tx.data}`,
+    chainId: network.chainId,
+  };
+
   const result = JSON.parse(
-    sign_message(
+    sign_tx(
       JSON.stringify({
         key: password,
         chain: "ETHEREUM",
         derivationPath: session.derivationPath,
-        input: {
-          message: `creator-vault-tip:${session.address}`,
-          signatureType: "PersonalSign",
-        },
+        input,
       })
     )
-  ) as { signature: string };
-  return result.signature;
+  ) as SignTxResult;
+
+  if (!result.signature && !result.signedTransaction && !result.rawTransaction) {
+    throw new Error("TokenCore 签名失败");
+  }
+
+  return result;
 }
 
-export { tipLinkForAddress as buildTipLink } from "./assets";
+export function extractRawTransaction(result: SignTxResult): string {
+  const raw =
+    result.signedTransaction || result.rawTransaction || result.signature || "";
+  if (!raw) {
+    throw new Error("未获取到已签名交易数据");
+  }
+  return raw.startsWith("0x") ? raw : `0x${raw}`;
+}

@@ -5,6 +5,7 @@ import init, {
   derive_accounts,
   export_mnemonic,
   sign_message,
+  sign_tx,
 } from "@consenlabs/tcx-wasm";
 import wasmUrl from "@consenlabs/tcx-wasm/tcx_wasm_bg.wasm?url";
 
@@ -29,4 +30,5 @@ export {
   derive_accounts,
   export_mnemonic,
   sign_message,
+  sign_tx,
 };

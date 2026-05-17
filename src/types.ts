@@ -1,26 +1,8 @@
-export type FundType = "tip" | "royalty" | "sale";
+export type AppView = "home" | "swap" | "wallet" | "guide";
 
-export interface Work {
-  id: string;
+export interface TutorialStep {
+  id: number;
   title: string;
-  cover: string;
-  edition: string;
-  holders: number;
-  earned: number;
-  royaltyRate: number;
-  mintSignature?: string;
+  desc: string;
+  tip: string;
 }
-
-export interface FundFlow {
-  id: string;
-  type: FundType;
-  amount: number;
-  currency: string;
-  from: string;
-  workTitle?: string;
-  at: string;
-}
-
-export type Tab = "works" | "funds";
-
-export type Action = "mint" | "royalty" | "tip";

@@ -3,11 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="创作者极简网页钱包 — 作品与资金" />
-    <title>Creator Vault · 创作者钱包</title>
+    <meta
+      name="description"
+      content="Easy Wallet — 小白友好型链上钱包助手，集成 imToken TokenCore (tcx-wasm)"
+    />
+    <title>Easy Wallet · 链上钱包助手</title>
   </head>
   <body>
+    <style>
+      :root {
+        --bg: #eef4ff;
+        --primary: #2563eb;
+        --text: #0f172a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+          sans-serif;
+        background: linear-gradient(180deg, #dbeafe 0%, var(--bg) 42%);
+        color: var(--text);
+        min-height: 100dvh;
+      }
+      #boot-hint {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem;
+        line-height: 1.6;
+      }
+      #boot-hint h1 {
+        font-size: 1.5rem;
+        color: var(--primary);
+        margin: 0 0 0.5rem;
+      }
+      #boot-hint code {
+        background: #fff;
+        padding: 0.15rem 0.4rem;
+        border-radius: 6px;
+        font-size: 0.9em;
+      }
+      #boot-hint .warn {
+        color: #dc2626;
+        font-weight: 600;
+      }
+    </style>
+    <div id="boot-hint">
+      <h1>Easy Wallet</h1>
+      <p id="boot-msg">正在加载应用…</p>
+    </div>
     <div id="root"></div>
+    <script>
+      (function () {
+        if (location.protocol === "file:") {
+          document.getElementById("boot-msg").innerHTML =
+            '<span class="warn">不能双击打开本文件。</span>请在项目文件夹打开终端，执行：<br><br><code>npm install</code><br><code>npm run dev</code><br><br>然后访问 <code>http://localhost:5173</code>';
+          throw new Error("file:// blocked");
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
