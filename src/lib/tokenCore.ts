@@ -1,8 +1,9 @@
 import {
+  broadcastRawTx,
   fetchGasPrice,
   fetchNonce,
-  parseEthToWei,
-} from "./ethereum";
+  parseNativeAmount,
+} from "./rpc";
 import type { NetworkConfig } from "./networks";
 import {
   ETH_PATH,
@@ -15,10 +16,10 @@ import {
   sign_tx,
 } from "./tcxWasm";
 
-const STORAGE_KEY = "easy-wallet-keystore";
-const NETWORK_KEY = "easy-wallet-network";
-const BACKUP_KEY = "easy-wallet-backup-done";
-const TUTORIAL_KEY = "easy-wallet-tutorial-done";
+const STORAGE_KEY = "vaultguard-keystore";
+const NETWORK_KEY = "vaultguard-network";
+const BACKUP_KEY = "vaultguard-backup-done";
+const PIN_KEY = "vaultguard-transfer-pin";
 
 export interface EthAccount {
   address: string;
@@ -38,16 +39,6 @@ export interface SignTxResult {
   signedTransaction?: string;
   rawTransaction?: string;
   txHash?: string;
-}
-
-export interface SwapTxPayload {
-  to: string;
-  from: string;
-  value: string;
-  data: string;
-  gas: string;
-  gasPrice?: string;
-  chainId: number;
 }
 
 export async function ensureTcx(): Promise<void> {
@@ -80,14 +71,6 @@ export function markBackupConfirmed(): void {
   localStorage.setItem(BACKUP_KEY, "1");
 }
 
-export function isTutorialDone(): boolean {
-  return localStorage.getItem(TUTORIAL_KEY) === "1";
-}
-
-export function markTutorialDone(): void {
-  localStorage.setItem(TUTORIAL_KEY, "1");
-}
-
 export function loadStoredNetwork(): string | null {
   try {
     return localStorage.getItem(NETWORK_KEY);
@@ -98,6 +81,25 @@ export function loadStoredNetwork(): string | null {
 
 export function saveStoredNetwork(id: string): void {
   localStorage.setItem(NETWORK_KEY, id);
+}
+
+export function hasTransferPin(): boolean {
+  return !!localStorage.getItem(PIN_KEY);
+}
+
+export function setTransferPin(pin: string): void {
+  if (!/^\d{6}$/.test(pin)) {
+    throw new Error("转账 PIN 须为 6 位数字");
+  }
+  localStorage.setItem(PIN_KEY, pin);
+}
+
+export function verifyTransferPin(pin: string): boolean {
+  return localStorage.getItem(PIN_KEY) === pin;
+}
+
+export function clearTransferPin(): void {
+  localStorage.removeItem(PIN_KEY);
 }
 
 export async function generateMnemonicPhrase(): Promise<string> {
@@ -113,9 +115,7 @@ export async function generateMnemonicPhrase(): Promise<string> {
     export_mnemonic(JSON.stringify({ keystoreJson, key: tempPass }))
   ) as { mnemonic: string };
   clear_cached_keystore();
-  if (!mnemonic) {
-    throw new Error("助记词生成失败");
-  }
+  if (!mnemonic) throw new Error("助记词生成失败");
   return mnemonic;
 }
 
@@ -126,31 +126,24 @@ export async function exportWalletMnemonic(
   await ensureTcx();
   const { mnemonic } = JSON.parse(
     export_mnemonic(
-      JSON.stringify({
-        keystoreJson: session.keystoreJson,
-        key: password,
-      })
+      JSON.stringify({ keystoreJson: session.keystoreJson, key: password })
     )
   ) as { mnemonic: string };
-  if (!mnemonic) {
-    throw new Error("无法导出助记词，请检查密码");
-  }
+  if (!mnemonic) throw new Error("无法导出助记词，请检查密码");
   return mnemonic;
 }
 
 export async function createPasswordWallet(
   password: string,
   mnemonic?: string,
-  network: NetworkConfig = { tcxNetwork: "MAINNET" } as NetworkConfig
+  network: NetworkConfig
 ): Promise<WalletSession> {
   await ensureTcx();
   const param: Record<string, string> = {
     password,
     network: network.tcxNetwork,
   };
-  if (mnemonic?.trim()) {
-    param.mnemonic = mnemonic.trim();
-  }
+  if (mnemonic?.trim()) param.mnemonic = mnemonic.trim();
   const keystoreJson = create_keystore(JSON.stringify(param));
   return unlockKeystore(keystoreJson, password, network, true);
 }
@@ -169,7 +162,7 @@ export async function unlockKeystore(
         key: password,
         derivations: [
           {
-            chain: "ETHEREUM",
+            chain: network.tcxChain,
             derivationPath: ETH_PATH,
             chainId: network.chainId,
             network: network.tcxNetwork,
@@ -181,12 +174,10 @@ export async function unlockKeystore(
 
   const eth = accounts[0];
   if (!eth?.address) {
-    throw new Error("无法派生以太坊地址，请检查密码或助记词");
+    throw new Error("无法派生地址，请检查密码或助记词");
   }
 
-  if (persist) {
-    saveKeystore(keystoreJson);
-  }
+  if (persist) saveKeystore(keystoreJson);
 
   return {
     address: eth.address,
@@ -199,12 +190,12 @@ export function disconnectWallet(): void {
   clear_cached_keystore();
 }
 
-export async function signEthTransfer(
+export async function signNativeTransfer(
   session: WalletSession,
   password: string,
   network: NetworkConfig,
   to: string,
-  amountEth: string
+  amount: string
 ): Promise<SignTxResult> {
   await ensureTcx();
   cache_keystore(session.keystoreJson);
@@ -214,7 +205,7 @@ export async function signEthTransfer(
     throw new Error("收款地址格式不正确");
   }
 
-  const valueWei = parseEthToWei(amountEth);
+  const valueWei = parseNativeAmount(amount);
   const nonce = await fetchNonce(network, session.address);
   const gasPrice = await fetchGasPrice(network);
   const gasLimit = "21000";
@@ -223,7 +214,7 @@ export async function signEthTransfer(
     sign_tx(
       JSON.stringify({
         key: password,
-        chain: "ETHEREUM",
+        chain: network.tcxChain,
         derivationPath: session.derivationPath,
         input: {
           nonce,
@@ -240,56 +231,24 @@ export async function signEthTransfer(
   if (!result.signature && !result.signedTransaction && !result.rawTransaction) {
     throw new Error("TokenCore 签名失败");
   }
-
   return result;
 }
 
-export async function signSwapTx(
+export async function signAndBroadcastTransfer(
   session: WalletSession,
   password: string,
   network: NetworkConfig,
-  tx: SwapTxPayload
-): Promise<SignTxResult> {
-  await ensureTcx();
-  cache_keystore(session.keystoreJson);
-
-  const nonce = await fetchNonce(network, session.address);
-  const gasPrice =
-    tx.gasPrice ?? (await fetchGasPrice(network));
-
-  const input: Record<string, string> = {
-    nonce,
-    gasPrice: String(gasPrice),
-    gasLimit: String(tx.gas),
-    to: tx.to,
-    value: String(tx.value || "0"),
-    data: tx.data.startsWith("0x") ? tx.data : `0x${tx.data}`,
-    chainId: network.chainId,
-  };
-
-  const result = JSON.parse(
-    sign_tx(
-      JSON.stringify({
-        key: password,
-        chain: "ETHEREUM",
-        derivationPath: session.derivationPath,
-        input,
-      })
-    )
-  ) as SignTxResult;
-
-  if (!result.signature && !result.signedTransaction && !result.rawTransaction) {
-    throw new Error("TokenCore 签名失败");
-  }
-
-  return result;
+  to: string,
+  amount: string
+): Promise<string> {
+  const signed = await signNativeTransfer(session, password, network, to, amount);
+  const raw = extractRawTransaction(signed);
+  return broadcastRawTx(network, raw);
 }
 
 export function extractRawTransaction(result: SignTxResult): string {
   const raw =
     result.signedTransaction || result.rawTransaction || result.signature || "";
-  if (!raw) {
-    throw new Error("未获取到已签名交易数据");
-  }
+  if (!raw) throw new Error("未获取到已签名交易数据");
   return raw.startsWith("0x") ? raw : `0x${raw}`;
 }

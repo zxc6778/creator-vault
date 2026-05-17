@@ -15,11 +15,5 @@
       "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/swap/paraswap/:path*",
-      "destination": "https://api.paraswap.io/:path*"
-    },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

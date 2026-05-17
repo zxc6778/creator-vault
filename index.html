@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Easy Wallet — 小白友好型链上钱包助手，集成 imToken TokenCore (tcx-wasm)"
+      content="VaultGuard — 基于 TokenCore 的安全自托管网页钱包，私钥不离设备"
     />
-    <title>Easy Wallet · 链上钱包助手</title>
+    <title>VaultGuard · 自托管安全钱包</title>
   </head>
   <body>
     <style>
       :root {
-        --bg: #eef4ff;
-        --primary: #2563eb;
-        --text: #0f172a;
+        --bg: #0b0e14;
+        --primary: #3d8bfd;
+        --text: #e8ecf4;
       }
       * {
         box-sizing: border-box;
@@ -23,7 +23,7 @@
         margin: 0;
         font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
           sans-serif;
-        background: linear-gradient(180deg, #dbeafe 0%, var(--bg) 42%);
+        background: var(--bg);
         color: var(--text);
         min-height: 100dvh;
       }
@@ -39,19 +39,19 @@
         margin: 0 0 0.5rem;
       }
       #boot-hint code {
-        background: #fff;
+        background: #161b26;
         padding: 0.15rem 0.4rem;
         border-radius: 6px;
         font-size: 0.9em;
       }
       #boot-hint .warn {
-        color: #dc2626;
+        color: #f87171;
         font-weight: 600;
       }
     </style>
     <div id="boot-hint">
-      <h1>Easy Wallet</h1>
-      <p id="boot-msg">正在加载应用…</p>
+      <h1>VaultGuard</h1>
+      <p id="boot-msg">正在加载 TokenCore…</p>
     </div>
     <div id="root"></div>
     <script>

@@ -1,107 +1,83 @@
-# Easy Wallet
+# VaultGuard · 自托管安全钱包
 
-**小白友好型链上钱包助手** — 基于 imToken [TokenCore](https://github.com/consenlabs/token-core-monorepo) 浏览器 WASM 包 [`@consenlabs/tcx-wasm`](https://www.npmjs.com/package/@consenlabs/tcx-wasm) 构建。
+基于 [imToken TokenCore](https://github.com/consenlabs/token-core-monorepo)（`@consenlabs/tcx-wasm`）的网页自托管钱包：**私钥与助记词全程不离开用户设备**，签名在浏览器内由 WASM 完成。
 
-清爽蓝白 UI，大按钮、移动端与桌面端自适应，可直接部署到 [Vercel](https://vercel.com)。
+## 核心特性
 
-## 功能
-
-| 模块 | 说明 |
+| 能力 | 说明 |
 |------|------|
-| 极简创建 | 助记词创建 / 导入、一键生成助记词、风险提示勾选 |
-| 链上操作 | ETH 主网 / Sepolia 测试网切换、余额查询、`sign_tx` 本地签名转账 |
-| 闪兑 | ETH / USDC / USDT 一键兑换（[ParaSwap](https://www.paraswap.io) 聚合路由 + TokenCore 签名） |
-| 新手引导 | 三步教程：创建钱包 → 备份助记词 → 发起转账 |
-| 安全存储 | Keystore JSON 本地加密（`localStorage`），密码与助记词不上传服务器 |
-| TokenCore | `create_keystore`、`derive_accounts`、`export_mnemonic`、`sign_tx` |
+| 本地私钥管理 | Keystore / 助记词仅存 `localStorage`，经 TokenCore 加密 |
+| 多链 EVM | Ethereum、BSC、Base；Sepolia 测试网 |
+| 安全增强 | 离线助记词备份、转账二次确认（密码 + 可选 PIN）、合约/首转风险提示 |
+| 隐私 | 无注册、无后端、不上传任何用户数据 |
+| TokenCore 签名 | `create_keystore` / `derive_accounts` / `sign_tx` |
+
+> **Solana（SOL）**：当前 `tcx-wasm` 公开包以 EVM / BTC 等为主，**暂不支持 SOL 链上签名**。界面已标注说明；EVM 三链可正常余额查询与转账。
 
 ## 快速开始
-
-**推荐（开发）：**
 
 ```bash
 npm install
 npm run dev
 ```
 
-终端会显示地址，浏览器打开 **http://localhost:5173**（不要双击 `index.html`，文件协议无法加载 React / WASM）。
+浏览器打开 **http://localhost:5173**（请勿用 `file://` 直接打开 `index.html`）。
 
-**预览构建结果：**
+### 生产构建
 
 ```bash
 npm run build
 npm run preview
 ```
 
-或：
+## 在线演示（GitHub Pages）
+
+**https://zxc6778.github.io/creator-vault/**
+
+部署命令（推送到 `zxc6778/creator-vault` 的 `gh-pages` 分支）：
 
 ```bash
-npm run build
-node server.mjs
-```
-
-`postinstall` 会将 WASM 复制到 `public/tcx-wasm/`（与 npm 包版本一致）。
-
-## 部署到 GitHub Pages（国内访问）
-
-```bash
-npm install
 npm run deploy:china
 ```
 
-访问：**https://zxc6778.github.io/creator-vault/**
-
-推送 `main` 分支后也会由 GitHub Actions 自动部署到 `gh-pages`。
-
-首次使用请在仓库 **Settings → Pages → Build and deployment → Branch** 选择 `gh-pages` / `/ (root)`。
-
-> 说明：GitHub Pages 为纯静态托管，**闪兑**需 ParaSwap 代理，静态站上可能不可用；创建钱包、转账（RPC）可正常使用。
+首次需在仓库 **Settings → Pages → Build and deployment → Branch** 选择 `gh-pages` / `/ (root)`。
 
 ## 部署到 Vercel
 
 1. 将本仓库推送到 GitHub / Gitee
-2. 在 Vercel 导入项目，框架选择 **Vite**
+2. 在 [Vercel](https://vercel.com) 导入项目
 3. 构建命令：`npm run build`，输出目录：`dist`
-4. 根目录已包含 `vercel.json`（SPA 回退 + WASM MIME）
+4. 根目录已包含 `vercel.json`（SPA 回退）
 
 或使用 CLI：
 
 ```bash
 npm i -g vercel
-vercel
+vercel --prod
 ```
+
+## 技术栈
+
+- Vite 6 + React 19 + TypeScript
+- [@consenlabs/tcx-wasm](https://www.npmjs.com/package/@consenlabs/tcx-wasm)（安装后复制到 `public/tcx-wasm/`）
+- 公共 RPC 查询余额（无自建后端）
+
+## 安全提示
+
+- 助记词 = 资产所有权，请**纸笔离线备份**，勿截图、勿上传网盘
+- 本 Demo 未做硬件安全模块（TEE）加固，浏览器环境存在 XSS / 恶意扩展风险，大额资产请使用官方 imToken 或硬件钱包
+- 测试网水龙头领取测试币后再练习转账
 
 ## 目录结构
 
 ```
 src/
-  App.tsx                 # 主界面
-  components/
-    WalletSetupModal.tsx  # 创建 / 导入 / 解锁
-    BackupMnemonicModal.tsx
-    OnboardingGuide.tsx   # 三步新手教程
-    SendPanel.tsx         # 转账
-  lib/
-    tcxWasm.ts            # WASM 初始化
-    tokenCore.ts          # 钱包会话、签名
-    ethereum.ts           # JSON-RPC（余额、广播）
-    networks.ts           # 主网 / 测试网配置
-public/tcx-wasm/          # tcx-wasm 浏览器包
-vercel.json
+  lib/          # TokenCore 封装、RPC、网络、风险检测
+  components/   # 钱包创建、转账确认、安全中心
+  App.tsx       # 主界面（深色、桌面优先）
+public/tcx-wasm # TokenCore WASM（postinstall 生成）
 ```
 
-## 安全说明
+## 许可证
 
-- 助记词与 Keystore **仅在浏览器内**由 TokenCore 处理，本项目无后端账户系统。
-- 密码用于解锁本机 Keystore；**遗忘密码需用助记词恢复**。
-- 新手请先在 **Sepolia 测试网**练习，主网资产请谨慎操作。
-- 公共电脑请勿保存钱包；助记词勿截图、勿通过网络发送。
-
-## 参考
-
-- [token-core-monorepo](https://github.com/consenlabs/token-core-monorepo)
-- [tcx-wasm README](https://github.com/consenlabs/token-core-monorepo/tree/tenth-anniversary/token-core/tcx-wasm)
-
-## License
-
-Apache-2.0
+Apache-2.0（与 TokenCore 一致）。本仓库为社区演示作品，与 imToken 官方无隶属关系。

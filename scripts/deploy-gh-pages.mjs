@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build China-friendly static site and push to gh-pages branch.
- * GitHub Pages: https://zxc6778.github.io/creator-vault/ (Easy Wallet)
+ * GitHub Pages: https://zxc6778.github.io/creator-vault/ (VaultGuard)
  */
 import { execSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
@@ -25,10 +25,10 @@ const tmp = mkdtempSync(join(tmpdir(), "cv-gh-pages-"));
 cpSync(join(root, "dist"), tmp, { recursive: true });
 
 const gitEnv = {
-  GIT_AUTHOR_NAME: "Easy Wallet",
-  GIT_AUTHOR_EMAIL: "easy-wallet@users.noreply.github.com",
-  GIT_COMMITTER_NAME: "Easy Wallet",
-  GIT_COMMITTER_EMAIL: "easy-wallet@users.noreply.github.com",
+  GIT_AUTHOR_NAME: "VaultGuard",
+  GIT_AUTHOR_EMAIL: "vaultguard@users.noreply.github.com",
+  GIT_COMMITTER_NAME: "VaultGuard",
+  GIT_COMMITTER_EMAIL: "vaultguard@users.noreply.github.com",
 };
 
 try {
