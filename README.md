@@ -42,6 +42,21 @@ node server.mjs
 
 `postinstall` 会将 WASM 复制到 `public/tcx-wasm/`（与 npm 包版本一致）。
 
+## 部署到 GitHub Pages（国内访问）
+
+```bash
+npm install
+npm run deploy:china
+```
+
+访问：**https://asd6666667.github.io/creator-vault/**
+
+推送 `main` 分支后也会由 GitHub Actions 自动部署到 `gh-pages`。
+
+首次使用请在仓库 **Settings → Pages → Build and deployment → Branch** 选择 `gh-pages` / `/ (root)`。
+
+> 说明：GitHub Pages 为纯静态托管，**闪兑**需 ParaSwap 代理，静态站上可能不可用；创建钱包、转账（RPC）可正常使用。
+
 ## 部署到 Vercel
 
 1. 将本仓库推送到 GitHub / Gitee

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build China-friendly static site and push to gh-pages branch.
- * GitHub Pages: https://asd6666667.github.io/creator-vault/
+ * GitHub Pages: https://asd6666667.github.io/creator-vault/ (Easy Wallet)
  */
 import { execSync } from "node:child_process";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
@@ -25,22 +25,22 @@ const tmp = mkdtempSync(join(tmpdir(), "cv-gh-pages-"));
 cpSync(join(root, "dist"), tmp, { recursive: true });
 
 const gitEnv = {
-  GIT_AUTHOR_NAME: "Creator Vault",
-  GIT_AUTHOR_EMAIL: "creator-vault@users.noreply.github.com",
-  GIT_COMMITTER_NAME: "Creator Vault",
-  GIT_COMMITTER_EMAIL: "creator-vault@users.noreply.github.com",
+  GIT_AUTHOR_NAME: "Easy Wallet",
+  GIT_AUTHOR_EMAIL: "easy-wallet@users.noreply.github.com",
+  GIT_COMMITTER_NAME: "Easy Wallet",
+  GIT_COMMITTER_EMAIL: "easy-wallet@users.noreply.github.com",
 };
 
 try {
   run(`${git} init`, { cwd: tmp });
-  run(`${git} checkout -b ${branch}`, { cwd: tmp, env: gitEnv });
+  run(`${git} checkout -B ${branch}`, { cwd: tmp, env: gitEnv });
   run(`${git} add -A`, { cwd: tmp });
   run(`${git} commit -m "deploy: ${new Date().toISOString()}"`, { cwd: tmp, env: gitEnv });
   const repo = process.env.REPO_URL || "https://github.com/asd6666667/creator-vault.git";
   run(`${git} push -f ${repo} HEAD:${branch}`, { cwd: tmp, env: gitEnv });
-  console.log("\nChina / domestic URL:");
+  console.log("\nGitHub Pages URL:");
   console.log("  https://asd6666667.github.io/creator-vault/");
-  console.log("\nInternational: deploy main to Vercel (auto on git push).");
+  console.log("\n若首次部署，请在仓库 Settings → Pages → Source 选择 gh-pages 分支。");
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }
